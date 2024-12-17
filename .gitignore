@@ -14,6 +14,9 @@ HELP.md
 .sts4-cache
 
 ### IntelliJ IDEA ###
+#忽略配置文件，配置文件手动上传到仓库
+src/main/resources/application.yml
+.gitignore
 #.idea
 *.iws
 *.iml
