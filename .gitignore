@@ -15,7 +15,7 @@ HELP.md
 
 ### IntelliJ IDEA ###
 #忽略配置文件，配置文件手动上传到仓库
-src/main/resources/application.yml
+application-local.yml
 .gitignore
 #.idea
 *.iws

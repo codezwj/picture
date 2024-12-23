@@ -8,9 +8,9 @@ spring:
     name: juice-pic-backend
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://43.155.219.134:3306/juicePicture
+    url: jdbc:mysql://localhost:3306/juicePicture
     username: root
-    password: 2004723zwJ@
+    password: 123456
 
 mybatis-plus:
   configuration:

@@ -5,7 +5,7 @@
       <TemplateContext>
         <option name="generateConfig">
           <GenerateConfig>
-            <option name="annotationType" value="NONE" />
+            <option name="annotationType" value="MYBATIS_PLUS3" />
             <option name="basePackage" value="generator" />
             <option name="basePath" value="src/main/java" />
             <option name="classNameStrategy" value="camel" />
@@ -68,8 +68,8 @@
             <option name="tableUIInfoList">
               <list>
                 <TableUIInfo>
-                  <option name="className" value="User" />
-                  <option name="tableName" value="user" />
+                  <option name="className" value="Picture" />
+                  <option name="tableName" value="picture" />
                 </TableUIInfo>
               </list>
             </option>
