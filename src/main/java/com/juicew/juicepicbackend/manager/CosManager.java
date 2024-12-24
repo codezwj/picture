@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.io.File;
 
+
 @Component
 public class CosManager {
 
@@ -51,7 +52,6 @@ public class CosManager {
      * @param key  唯一键
      * @param file 文件
      */
-    //todo 还没看
     public PutObjectResult putPictureObject(String key, File file) {
         PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key,
                 file);
@@ -63,6 +63,7 @@ public class CosManager {
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);
     }
+
 
 
 }
