@@ -15,6 +15,13 @@ spring:
     #开放更大的文件上传体积
     multipart:
       max-file-size: 10MB
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    timeout: 5000
+#  profiles:
+#    active: local
 
 mybatis-plus:
   configuration:
@@ -39,3 +46,12 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.juicew.juicepicbackend.controller
+
+# COS配置（需要从腾讯云获取）
+cos:
+  client:
+    host: xxx
+    secretId: xxx
+    secretKey: xxx
+    region: xxx
+    bucket: xxx

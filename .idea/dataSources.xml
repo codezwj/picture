@@ -8,5 +8,12 @@
       <jdbc-url>jdbc:mysql://43.155.219.134:3306/juicepicture</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="juice" uuid="1595e865-e126-460d-9221-ce2b77f8dacc">
+      <driver-ref>redis</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>jdbc.RedisDriver</jdbc-driver>
+      <jdbc-url>jdbc:redis://43.155.219.134:6379/0</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
