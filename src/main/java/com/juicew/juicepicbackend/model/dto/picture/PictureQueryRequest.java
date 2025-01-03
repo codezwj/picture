@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
@@ -96,6 +97,17 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      * 需要有一个标志位来判断查的是否为公共空间
      */
     private boolean nullSpaceId;
+
+    /**
+     * 开始编辑时间
+     */
+    private Date startEditTime;
+
+    /**
+     * 结束编辑时间
+     */
+    private Date endEditTime;
+
 
 
     private static final long serialVersionUID = 1L;
