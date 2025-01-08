@@ -2,6 +2,7 @@ package com.juicew.juicepicbackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.juicew.juicepicbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.juicew.juicepicbackend.model.VO.PictureVO;
 import com.juicew.juicepicbackend.model.dto.picture.*;
 import com.juicew.juicepicbackend.model.entity.Picture;
@@ -133,5 +134,11 @@ public interface PictureService extends IService<Picture> {
     void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
 
 
-
+    /**
+     * 创建扩容任务
+     * @param createPictureOutPaintingTaskRequest
+     * @param loginUser
+     * @return
+     */
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 }
