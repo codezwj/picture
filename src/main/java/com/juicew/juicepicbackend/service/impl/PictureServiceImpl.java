@@ -27,6 +27,7 @@ import com.juicew.juicepicbackend.service.PictureService;
 import com.juicew.juicepicbackend.mapper.PictureMapper;
 import com.juicew.juicepicbackend.service.SpaceService;
 import com.juicew.juicepicbackend.service.UserService;
+import com.juicew.juicepicbackend.utils.ColorSimilarUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -35,15 +36,17 @@ import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.awt.*;
 import java.io.IOException;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 /**
@@ -178,6 +181,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setPicHeight(uploadPictureResult.getPicHeight());
         picture.setPicScale(uploadPictureResult.getPicScale());
         picture.setPicFormat(uploadPictureResult.getPicFormat());
+        picture.setPicColor(uploadPictureResult.getPicColor());
         picture.setUserId(loginUser.getId());
         //补充审核参数
         this.fillReviewParams(picture,loginUser);
@@ -542,6 +546,170 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         boolean result = this.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
     }
+
+    @Override
+    public List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser) {
+        //1.校验参数
+        ThrowUtils.throwIf(spaceId == null || StrUtil.isBlank(picColor),ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(loginUser == null,ErrorCode.NO_AUTH_ERROR);
+        //2.校验空间权限
+        Space space = spaceService.getById(spaceId);
+        ThrowUtils.throwIf(space == null ,ErrorCode.NOT_FOUND_ERROR,"空间不存在");
+        if(!loginUser.getId().equals(space.getUserId())){
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"没有空间访问权限");
+        }
+
+        //3.查询该空间下的所有图片，必须要有主色调
+        List<Picture> pictureList = this.lambdaQuery()
+                .eq(Picture::getSpaceId, spaceId)
+                .isNotNull(Picture::getPicColor)
+                .list();
+        if (CollUtil.isEmpty(pictureList)){
+            return new ArrayList<>();
+        }
+        //4.将颜色字符串转为主色调
+        Color targetColor = Color.decode(picColor);
+        List<Picture> sortedPictureList = pictureList.stream()
+                .sorted(Comparator.comparingDouble(picture -> {
+                    String hexColor = picture.getPicColor();
+                    //没有主色调的图片会默认排序到最后
+                    if(StrUtil.isBlank(hexColor)){
+                        return Double.MAX_VALUE;
+                    }
+                    Color pictureColor = Color.decode(hexColor);
+                    //计算相似度
+                    //越大越相似，sort默认越大越靠后，带上符号就排到最前面了
+                    return -ColorSimilarUtils.calculateSimilarity(targetColor, pictureColor);
+                }))
+                .limit(12)
+                .collect(Collectors.toList());
+        //返回
+        return sortedPictureList.stream()
+                .map(PictureVO::objToVo)
+                .collect(Collectors.toList());
+
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser) {
+        List<Long> pictureIdList = pictureEditByBatchRequest.getPictureIdList();
+        Long spaceId = pictureEditByBatchRequest.getSpaceId();
+        String category = pictureEditByBatchRequest.getCategory();
+        List<String> tags = pictureEditByBatchRequest.getTags();
+
+        // 1. 校验参数
+        ThrowUtils.throwIf(spaceId == null || CollUtil.isEmpty(pictureIdList), ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+        // 2. 校验空间权限
+        Space space = spaceService.getById(spaceId);
+        ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+        if (!loginUser.getId().equals(space.getUserId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间访问权限");
+        }
+
+        // 3. 查询指定图片，仅选择需要的字段
+        List<Picture> pictureList = this.lambdaQuery()
+                .select(Picture::getId, Picture::getSpaceId)
+                .eq(Picture::getSpaceId, spaceId)
+                .in(Picture::getId, pictureIdList)
+                .list();
+
+        if (pictureList.isEmpty()) {
+            return;
+        }
+        // 4. 更新分类和标签
+        pictureList.forEach(picture -> {
+            if (StrUtil.isNotBlank(category)) {
+                picture.setCategory(category);
+            }
+            if (CollUtil.isNotEmpty(tags)) {
+                picture.setTags(JSONUtil.toJsonStr(tags));
+            }
+        });
+
+        // 批量重命名
+        String nameRule = pictureEditByBatchRequest.getNameRule();
+        fillPictureWithNameRule(pictureList, nameRule);
+
+        // 5. 批量更新
+        boolean result = this.updateBatchById(pictureList);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+    }
+
+    /**
+     * nameRule 格式：图片{序号}
+     *
+     * @param pictureList
+     * @param nameRule
+     */
+    private void fillPictureWithNameRule(List<Picture> pictureList, String nameRule) {
+        if (CollUtil.isEmpty(pictureList) || StrUtil.isBlank(nameRule)) {
+            return;
+        }
+        long count = 1;
+        try {
+            for (Picture picture : pictureList) {
+                String pictureName = nameRule.replaceAll("\\{序号}", String.valueOf(count++));
+                picture.setName(pictureName);
+            }
+        } catch (Exception e) {
+            log.error("名称解析错误", e);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "名称解析错误");
+        }
+    }
+
+
+
+//多线程+并发+分批操作更新大量数据
+//    /**
+//     * 批量编辑图片分类和标签
+//     */
+//    @Override
+//    @Transactional(rollbackFor = Exception.class)
+//    public void batchEditPictureMetadata(PictureBatchEditRequest request, Long spaceId, Long loginUserId) {
+//        // 参数校验
+//        validateBatchEditRequest(request, spaceId, loginUserId);
+//
+//        // 查询空间下的图片
+//        List<Picture> pictureList = this.lambdaQuery()
+//                .eq(Picture::getSpaceId, spaceId)
+//                .in(Picture::getId, request.getPictureIds())
+//                .list();
+//
+//        if (pictureList.isEmpty()) {
+//            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "指定的图片不存在或不属于该空间");
+//        }
+//
+//        // 分批处理避免长事务
+//        int batchSize = 100;
+//        List<CompletableFuture<Void>> futures = new ArrayList<>();
+//        for (int i = 0; i < pictureList.size(); i += batchSize) {
+//            List<Picture> batch = pictureList.subList(i, Math.min(i + batchSize, pictureList.size()));
+//
+//            // 异步处理每批数据
+//            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+//                batch.forEach(picture -> {
+//                    // 编辑分类和标签
+//                    if (request.getCategory() != null) {
+//                        picture.setCategory(request.getCategory());
+//                    }
+//                    if (request.getTags() != null) {
+//                        picture.setTags(String.join(",", request.getTags()));
+//                    }
+//                });
+//                boolean result = this.updateBatchById(batch);
+//                if (!result) {
+//                    throw new BusinessException(ErrorCode.OPERATION_ERROR, "批量更新图片失败");
+//                }
+//            }, customExecutor);
+//
+//            futures.add(future);
+//        }
+//
+//        // 等待所有任务完成
+//        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+//    }
 
 
 }
