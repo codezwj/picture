@@ -2,17 +2,17 @@ package com.juicew.juicepicbackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.juicew.juicepicbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.juicew.juicepicbackend.model.VO.PictureVO;
-import com.juicew.juicepicbackend.model.dto.picture.PictureQueryRequest;
-import com.juicew.juicepicbackend.model.dto.picture.PictureReviewRequest;
-import com.juicew.juicepicbackend.model.dto.picture.PictureUploadByBatchRequest;
-import com.juicew.juicepicbackend.model.dto.picture.PictureUploadRequest;
+import com.juicew.juicepicbackend.model.dto.picture.*;
 import com.juicew.juicepicbackend.model.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.juicew.juicepicbackend.model.entity.User;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author nxbhx
@@ -96,4 +96,49 @@ public interface PictureService extends IService<Picture> {
      */
     void clearPictureFile(Picture oldPicture);
 
+    /**
+     * 校验空间图片权限
+     * @param loginUser
+     * @param picture
+     */
+    void checkPictureAuth(User loginUser, Picture picture);
+
+    /**
+     *抽象删除图片
+     * @param pictureId
+     * @param loginUser
+     */
+    void deletePicture(long pictureId, User loginUser);
+
+    /**
+     * 抽象编辑图片
+     * @param pictureEditRequest
+     * @param loginUser
+     */
+    void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+    /**
+     * 根据颜色搜索图片
+     * @param spaceId
+     * @param picColor
+     * @param loginUser
+     * @return
+     */
+    List<PictureVO>  searchPictureByColor(Long spaceId, String picColor, User loginUser);
+
+    /**
+     * 批量编辑图片
+     * @param pictureEditByBatchRequest
+     * @param loginUser
+     */
+    void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
+
+
+    /**
+     * 创建扩容任务
+     * @param createPictureOutPaintingTaskRequest
+     * @param loginUser
+     * @return
+     */
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 }

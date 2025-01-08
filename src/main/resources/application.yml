@@ -55,3 +55,7 @@ cos:
     secretKey: xxx
     region: xxx
     bucket: xxx
+
+#阿里云百炼接口
+aliYunAi:
+  apiKey: xxx
