@@ -13,6 +13,7 @@ import com.juicew.juicepicbackend.constant.UserConstant;
 import com.juicew.juicepicbackend.exception.BusinessException;
 import com.juicew.juicepicbackend.exception.ErrorCode;
 import com.juicew.juicepicbackend.exception.ThrowUtils;
+import com.juicew.juicepicbackend.manager.auth.SpaceUserAuthManager;
 import com.juicew.juicepicbackend.model.VO.SpaceVO;
 import com.juicew.juicepicbackend.model.dto.space.*;
 import com.juicew.juicepicbackend.model.entity.Space;
@@ -47,6 +48,9 @@ public class SpaceController {
 
     @Resource
     private SpaceService spaceService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
 
 
@@ -133,8 +137,12 @@ public class SpaceController {
         // 查询数据库
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
+        SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
-        return ResultUtils.success(spaceService.getSpaceVO(space, request));
+        return ResultUtils.success(spaceVO);
     }
 
     /**
