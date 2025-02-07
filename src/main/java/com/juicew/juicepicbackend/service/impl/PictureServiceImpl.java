@@ -27,6 +27,7 @@ import com.juicew.juicepicbackend.model.entity.Picture;
 import com.juicew.juicepicbackend.model.entity.Space;
 import com.juicew.juicepicbackend.model.entity.User;
 import com.juicew.juicepicbackend.model.enums.PictureReviewStatusEnum;
+import com.juicew.juicepicbackend.model.enums.UserRoleEnum;
 import com.juicew.juicepicbackend.service.PictureService;
 import com.juicew.juicepicbackend.mapper.PictureMapper;
 import com.juicew.juicepicbackend.service.SpaceService;
@@ -113,9 +114,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
             //校验是否有空间的权限，必须是空间的管理员才能上传，也就是空间的创建者
-            if(!loginUser.getId().equals(space.getUserId())){
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"没有空间权限");
-            }
+//            if(!loginUser.getId().equals(space.getUserId())){
+//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"没有空间权限");
+//            }
             //校验额度
             if (space.getTotalCount() >= space.getMaxCount()){
                 throw new BusinessException(ErrorCode.OPERATION_ERROR,"空间条数不足");
@@ -136,10 +137,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (pictureId != null) {
             Picture oldPicture = this.getById(pictureId);
             ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-            if(!oldPicture.getUserId().equals(loginUser.getId()) || !userService.isAdmin(loginUser)){
-                //仅本人和管理员可操作
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-            }
+//            if(!oldPicture.getUserId().equals(loginUser.getId()) || !userService.isAdmin(loginUser)){
+//                //仅本人和管理员可操作
+//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+//            }
             //校验空间是否一致
             //没传spaceId，就复用原有的spaceId
             if (spaceId == null){
@@ -189,7 +190,15 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setPicColor(uploadPictureResult.getPicColor());
         picture.setUserId(loginUser.getId());
         //补充审核参数
-        this.fillReviewParams(picture,loginUser);
+//        this.fillReviewParams(picture,loginUser);
+        Space space = spaceService.getById(spaceId);
+        if (space.getSpaceType() == 1){
+            User user = BeanUtil.copyProperties(loginUser, User.class);
+            user.setUserRole(UserRoleEnum.ADMIN.getValue());
+            this.fillReviewParams(picture, user);
+        }else{
+            this.fillReviewParams(picture,loginUser);
+        }
         //操作数据库
         // 如果 pictureId 不为空，表示更新，否则是新增
         if (pictureId != null) {
@@ -505,8 +514,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture oldPicture = this.getById(pictureId);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
         // 校验权限
-        // 校验权限
-        checkPictureAuth(loginUser, oldPicture);
+        //改为使用注解鉴权
+//        checkPictureAuth(loginUser, oldPicture);
         // 开启事务
         transactionTemplate.execute(status -> {
             // 操作数据库
@@ -544,7 +553,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture oldPicture = this.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
         // 校验权限
-        checkPictureAuth(loginUser, oldPicture);
+        //改为使用注解鉴权
+//        checkPictureAuth(loginUser, oldPicture);
         // 补充审核参数
         this.fillReviewParams(picture, loginUser);
         // 操作数据库
@@ -724,7 +734,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture picture = Optional.ofNullable(this.getById(pictureId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR));
         // 权限校验
-        checkPictureAuth(loginUser, picture);
+        //改为使用注解鉴权
+//        checkPictureAuth(loginUser, picture);
         // 构造请求参数
         CreateOutPaintingTaskRequest taskRequest = new CreateOutPaintingTaskRequest();
         CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();
